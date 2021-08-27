@@ -88,7 +88,19 @@ function viewEmployees() {
 }
 
 function addDepartment() {
-    start();
+    inquirer.prompt({
+        type: "input",
+        message: "What is the name of the department?",
+        name: "departmentName"
+    }).then(response => {
+        db.query("INSERT INTO department (department) VALUES (?)", [response.departmentName], (err, result) => {
+            if (err) {
+                throw err;
+            }
+            console.log(`Added ${response.departmentName} department to the database`);
+        })
+        start();
+    })
 }
 
 function addRole() {
