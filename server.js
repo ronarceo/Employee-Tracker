@@ -98,11 +98,10 @@ function addDepartment() {
 
 function addRole() {
     db.query('SELECT * FROM department', (err, res) => {
-        console.log(res);
+        if(err) throw err;
         let departments = [];
         for (var i = 0; i < res.length; i++) {
             departments.push(res[i].department);
-            console.log(departments);
         }
 
         inquirer.prompt([
