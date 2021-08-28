@@ -22,8 +22,8 @@ db.connect(function(err) {
 function start() {
     inquirer.prompt({
         type: "list",
-        choices: ["View departments", "View roles", "View employees", "Add department", "Add role", "Add employee",  "Update employee role", "Quit"],
         message: "What would you like to do?",
+        choices: ["View departments", "View roles", "View employees", "Add department", "Add role", "Add employee",  "Update employee role", "Quit"],
         name: "startChoice"
     })
         .then(response => {
@@ -59,32 +59,26 @@ function start() {
 
 function viewDepartments() {
     db.query('SELECT * FROM department', (err, departments) => {
-        if (err) {
-            throw(err);
-        }
+        if (err) throw err;
         console.table(departments);
-    })
-    start();
+        start();
+    })    
 }
 
 function viewRoles() {
     db.query('SELECT role.id, role.title, department.department, role.salary FROM role JOIN department ON role.department_id = department.id', (err, roles) => {
-        if (err) {
-            throw(err);
-        }
+        if (err) throw err;
         console.table(roles);
+        start();
     })
-    start();
 }
 
 function viewEmployees() {
     db.query('SELECT employee.id, employee.first_name, employee.last_name, role.title, department.department FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id', (err, employees) => {
-        if (err) {
-            throw(err);
-        }
+        if (err) throw err;
         console.table(employees);
+        start();
     })
-    start();
 }
 
 function addDepartment() {
@@ -92,19 +86,58 @@ function addDepartment() {
         type: "input",
         message: "What is the name of the department?",
         name: "departmentName"
-    }).then(response => {
-        db.query("INSERT INTO department (department) VALUES (?)", [response.departmentName], (err, result) => {
-            if (err) {
-                throw err;
-            }
-            console.log(`Added ${response.departmentName} department to the database`);
-        })
-        start();
     })
+        .then(response => {
+            db.query('INSERT INTO department (department) VALUES (?)', [response.departmentName], (err, result) => {
+                if (err) throw err;
+                console.log(`Added ${response.departmentName} department to the database`);
+            })
+            start();
+        })
 }
 
 function addRole() {
-    start();
+    db.query('SELECT * FROM department', (err, res) => {
+        console.log(res);
+        let departments = [];
+        for (var i = 0; i < res.length; i++) {
+            departments.push(res[i].department);
+            console.log(departments);
+        }
+
+        inquirer.prompt([
+            {
+                type: "input",
+                message: "What is the name of the role?",
+                name: "roleName"
+            },
+            {
+                type: "number",
+                message: "What is the salary for the role?",
+                name: "salary"
+            },
+            {
+                type: "list",
+                message: "Which department does the role belong to?",
+                choices: departments,
+                name: "department"
+            }
+        ])
+            .then(response => {
+                let departmentId = departments.indexOf(response.department) + 1;
+                db.query('INSERT INTO role SET ?',
+                    {
+                        title: response.roleName,
+                        salary: response.salary,
+                        department_id: departmentId,
+                    },
+                    function (err) {
+                        if (err) throw err;
+                        console.table(response);
+                        start();
+                    })
+            })
+    })
 }
 
 function addEmployee() {
