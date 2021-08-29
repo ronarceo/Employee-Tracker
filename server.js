@@ -74,7 +74,7 @@ function viewRoles() {
 }
 
 function viewEmployees() {
-    db.query('SELECT employee.id, employee.first_name, employee.last_name, role.title, department.department FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id', (err, employees) => {
+    db.query('SELECT employee.id, employee.first_name, employee.last_name, role.title, role.salary, department.department, CONCAT(m.first_name, " " ,  m.last_name) AS Manager FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id LEFT JOIN employee m on employee.manager_id = m.id', (err, employees) => {
         if (err) throw err;
         console.table(employees);
         start();
@@ -91,8 +91,8 @@ function addDepartment() {
             db.query('INSERT INTO department (department) VALUES (?)', [response.departmentName], (err, result) => {
                 if (err) throw err;
                 console.log(`Added ${response.departmentName} department to the database`);
+                start();
             })
-            start();
         })
 }
 
