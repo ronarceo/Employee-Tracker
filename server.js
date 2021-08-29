@@ -1,9 +1,10 @@
+// defining necessary modules/packages and PORT
 require('dotenv').config();
 const mysql = require('mysql2');
 const inquirer = require('inquirer');
 const cTable = require('console.table');
 const PORT = process.env.PORT || 3001;
-
+// add a .env file or change properties below
 const db = mysql.createConnection(
     {
         host: process.env.DB_HOST,
@@ -13,12 +14,53 @@ const db = mysql.createConnection(
     },
     console.log(`Connected to the employees_db database.`)
 );
-
+// empty arrays to be used in inquirer prompt choices
+let departmentArray = [];
+let roleArray = [];
+let employeeArray = [];
+let managerArray = [];
+// functions below to fill arrays with current data from database
+function getDepartmentArray() {
+    departmentArray = [];
+    db.query('SELECT * FROM department', (err, res) => {
+        if (err) throw err;
+        for (var i = 0; i < res.length; i++) {
+            departmentArray.push(res[i].name);
+        }
+    })
+}
+function getRoleArray() {
+    roleArray = [];
+    db.query('SELECT * FROM role', (err, res) => {
+        for (var i = 0; i < res.length; i++) {
+            roleArray.push(res[i].title);
+        }
+    })
+}
+function getEmployeeArray() {
+    employeeArray = [];
+    db.query('SELECT * FROM employee', (err, res) => {
+        if (err) throw err;
+        for (var i = 0; i < res.length; i++) {
+            employeeArray.push(res[i].first_name + " " + res[i].last_name);
+        }
+    })
+}
+function getManagerArray() {
+    managerArray = ['No manager'];
+    db.query('SELECT * FROM employee', (err, res) => {
+        if (err) throw err;
+        for (var i = 0; i < res.length; i++) {
+            managerArray.push(res[i].first_name + " " + res[i].last_name);
+        }
+    })
+}
+// to establish connection to employees_db database then calling the start function
 db.connect(function(err) {
     if (err) throw err;
     start();
 });
-
+// displays all available choices then the switch statement executes a function based on the user's response
 function start() {
     inquirer.prompt({
         type: "list",
@@ -56,7 +98,7 @@ function start() {
             }
         })
 }
-
+// displays departments
 function viewDepartments() {
     db.query('SELECT * FROM department', (err, departments) => {
         if (err) throw err;
@@ -64,7 +106,7 @@ function viewDepartments() {
         start();
     })    
 }
-
+// displays roles with their salary and what department they belong to
 function viewRoles() {
     db.query('SELECT role.id, role.title, department.name AS department, role.salary FROM role JOIN department ON role.department_id = department.id', (err, roles) => {
         if (err) throw err;
@@ -72,15 +114,15 @@ function viewRoles() {
         start();
     })
 }
-
+// displays employees's details with their role title, salaray, and name of their manager
 function viewEmployees() {
-    db.query('SELECT employee.id, employee.first_name, employee.last_name, role.title, role.salary, department.name AS department, CONCAT(m.first_name, " " ,  m.last_name) AS Manager FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id LEFT JOIN employee m on employee.manager_id = m.id', (err, employees) => {
+    db.query('SELECT employee.id, employee.first_name, employee.last_name, role.title, role.salary, department.name AS department, CONCAT(m.first_name, " " ,  m.last_name) AS Manager FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id LEFT JOIN employee m on employee.manager_id = m.id ORDER BY id', (err, employees) => {
         if (err) throw err;
         console.table(employees);
         start();
     })
 }
-
+// adds a department named by the user
 function addDepartment() {
     inquirer.prompt({
         type: "input",
@@ -95,149 +137,123 @@ function addDepartment() {
             })
         })
 }
-
+// adds a role, user determines role, salary, and what department it's under
 function addRole() {
-    db.query('SELECT * FROM department', (err, res) => {
-        if(err) throw err;
-        let departments = [];
-        for (var i = 0; i < res.length; i++) {
-            departments.push(res[i].name);
+    getDepartmentArray();
+    inquirer.prompt([
+        {
+            type: "input",
+            message: "What is the name of the role?",
+            name: "roleName"
+        },
+        {
+            type: "number",
+            message: "What is the salary for the role?",
+            name: "salary"
+        },
+        {
+            type: "list",
+            message: "Which department does the role belong to?",
+            choices: departmentArray,
+            name: "department"
         }
-
-        inquirer.prompt([
-            {
-                type: "input",
-                message: "What is the name of the role?",
-                name: "roleName"
-            },
-            {
-                type: "number",
-                message: "What is the salary for the role?",
-                name: "salary"
-            },
-            {
-                type: "list",
-                message: "Which department does the role belong to?",
-                choices: departments,
-                name: "department"
-            }
-        ])
-            .then(response => {
-                let departmentId = departments.indexOf(response.department) + 1;
-                db.query('INSERT INTO role SET ?',
-                    {
-                        title: response.roleName,
-                        salary: response.salary,
-                        department_id: departmentId,
-                    },
-                    function (err) {
-                        if (err) throw err;
-                        console.log(`Added ${response.roleName} role to the database`);
-                        console.table(response);
-                        start();
-                    })
-            })
-    })
+    ])
+        .then(response => {
+            let departmentId = departmentArray.indexOf(response.department) + 1;
+            db.query('INSERT INTO role SET ?',
+                {
+                    title: response.roleName,
+                    salary: response.salary,
+                    department_id: departmentId,
+                },
+                function (err) {
+                    if (err) throw err;
+                    console.log(`Added ${response.roleName} role to the database`);
+                    console.table(response);
+                    start();
+                })
+        })
 }
-
+// adds an employee, user inputs the name, role, and manager of the employee, 
 function addEmployee() {
-    let roleArray = [];
-    let managerArray = ['No manager'];
-    db.query('SELECT * FROM role', (err, res) => {
-        for (var i = 0; i < res.length; i++) {
-            roleArray.push(res[i].title);
-        }
-        db.query('SELECT * FROM employee', (err, res) => {
-            for (var i = 0; i < res.length; i++) {
-                managerArray.push(res[i].first_name + " " + res[i].last_name);
-            }
-
-            inquirer.prompt([
+    getRoleArray();
+    getManagerArray();
+    inquirer.prompt([
+        {
+            type: "input",
+            message: "What is the employee's first name?",
+            name: "firstName"
+        },
+        {
+            type: "input",
+            message: "What is the employee's last name?",
+            name: "lastName"
+        },
+        {
+            type: "list",
+            message: "What is the employee's role?",
+            choices: roleArray,
+            name: "role"
+        },
+        {
+            type: "list",
+            message: "Who is the employee's manager?",
+            choices: managerArray,
+            name: "manager"
+        },
+    ])
+        .then((response) => {
+            let roleId = roleArray.indexOf(response.role) + 1;
+            let managerId = managerArray.indexOf(response.manager);
+            db.query(
+                'INSERT INTO employee SET ?',
                 {
-                    type: "input",
-                    message: "What is the employee's first name?",
-                    name: "firstName"
+                    first_name: response.firstName,
+                    last_name: response.lastName,
+                    role_id: roleId,
+                    manager_id: managerId,
                 },
-                {
-                    type: "input",
-                    message: "What is the employee's last name?",
-                    name: "lastName"
-                },
-                {
-                    type: "list",
-                    message: "What is the employee's role?",
-                    choices: roleArray,
-                    name: "role"
-                },
-                {
-                    type: "list",
-                    message: "What employee will manage the new employee?",
-                    choices: managerArray,
-                    name: "manager"
-                },
-            ])
-                .then((response) => {
-                    let roleId = roleArray.indexOf(response.role) + 1;
-                    let managerId = managerArray.indexOf(response.manager);
-                    db.query(
-                        'INSERT INTO employee SET ?',
-                        {
-                            first_name: response.firstName,
-                            last_name: response.lastName,
-                            role_id: roleId,
-                            manager_id: managerId,
-                        },
-                        function (err) {
-                            if (err) throw err;
-                            console.log(`Added employee: ${response.firstName} ${response.lastName} to the database`);
-                            console.table(response);
-                            start();
-                        })
+                function (err) {
+                    if (err) throw err;
+                    console.log(`Added employee: ${response.firstName} ${response.lastName} to the database`);
+                    console.table(response);
+                    start();
                 })
         })
-    })
 }
-
+// updates an existing employee's role
 function updateEmployee() {
-    let roleArray = [];
-    let employeeArray = [];
-    db.query('SELECT * FROM role', (err, res) => {
-        for (var i = 0; i < res.length; i++) {
-            roleArray.push(res[i].title);
-        }
-        db.query('SELECT * FROM employee', (err, res) => {
-            for (var i = 0; i < res.length; i++) {
-                employeeArray.push(res[i].first_name + " " + res[i].last_name);
-            }
-
-            inquirer.prompt([
-                {
-                    type: "list",
-                    message: "Which employee's role do you want to update?",
-                    choices: employeeArray,
-                    name: "employee"
-                },
-                {
-                    type: "list",
-                    message: "Which role do you want to assign the selected employee?",
-                    choices: roleArray,
-                    name: "role"
-                },
-            ])
-                .then((response) => {
-                    let employeeId = employeeArray.indexOf(response.employee) + 1;
-                    let roleId = roleArray.indexOf(response.role) + 1;
-                    db.query('UPDATE employee SET role_id = ? WHERE id = ?', [roleId, employeeId], (err, result) => {
-                        if (err) throw err;
-                        console.log(`Updated employee: ${response.employee}`);
-                        console.table(response);
-                        start();
-                    })
-                })
+    getEmployeeArray();
+    getRoleArray();
+    inquirer.prompt([
+        {
+            message: "Changing an employee's role will automatically change their salary to the salary of the new role. Press enter to continue.",
+            name: "advisory"
+        },
+        {
+            type: "list",
+            message: "Which employee's role do you want to update?",
+            choices: employeeArray,
+            name: "employee"
+        },
+        {
+            type: "list",
+            message: "Which role do you want to assign the selected employee?",
+            choices: roleArray,
+            name: "role"
+        },
+    ])
+        .then((response) => {
+            let employeeId = employeeArray.indexOf(response.employee) + 1;
+            let roleId = roleArray.indexOf(response.role) + 1;
+            db.query('UPDATE employee SET role_id = ? WHERE id = ?', [roleId, employeeId], (err, result) => {
+                if (err) throw err;
+                console.log(`Updated employee: ${response.employee}`);
+                console.table(response);
+                start();
+            })
         })
-    })
 }
-
 
 function quit() {
     process.exit();
