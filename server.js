@@ -47,7 +47,7 @@ function getEmployeeArray() {
     })
 }
 function getManagerArray() {
-    managerArray = ['No manager'];
+    managerArray = ['no manager'];
     db.query('SELECT * FROM employee', (err, res) => {
         if (err) throw err;
         for (var i = 0; i < res.length; i++) {
@@ -65,7 +65,7 @@ function start() {
     inquirer.prompt({
         type: "list",
         message: "What would you like to do?",
-        choices: ["View departments", "View roles", "View employees", "Add department", "Add role", "Add employee",  "Update employee role", "Quit"],
+        choices: ["View departments", "View roles", "View employees", "Add department", "Add role", "Add employee",  "Update employee's role", "Update employee's manager", "Quit"],
         name: "startChoice"
     })
         .then(response => {
@@ -90,8 +90,11 @@ function start() {
                 case "Add employee":
                     addEmployee();
                     break;
-                case "Update employee role":
+                case "Update employee's role":
                     updateEmployee();
+                    break;
+                case "Update employee's manager":
+                    updateManager();
                     break;
                 default:
                     quit();
@@ -248,8 +251,39 @@ function updateEmployee() {
             let roleId = roleArray.indexOf(response.role) + 1;
             db.query('UPDATE employee SET role_id = ? WHERE id = ?', [roleId, employeeId], (err, result) => {
                 if (err) throw err;
-                console.log(`Updated employee: ${response.employee}`);
-                console.table(response);
+                console.log(`${response.employee}'s role has been updated to ${response.role}`);
+                start();
+            })
+        })
+}
+// updates an existing employee's manager
+function updateManager() {
+    getEmployeeArray();
+    getManagerArray();
+    inquirer.prompt([
+        {
+            message: "First select the employee then choose their manager or no manager to unassign their current manager. Press enter to continue.",
+            name: "advisory"
+        },
+        {
+            type: "list",
+            message: "Which employee's role do you want to update?",
+            choices: employeeArray,
+            name: "employee"
+        },
+        {
+            type: "list",
+            message: "Who is the manager of the selected employee?",
+            choices: managerArray,
+            name: "manager"
+        },
+    ])
+        .then((response) => {
+            let employeeId = employeeArray.indexOf(response.employee) + 1;
+            let managerId = managerArray.indexOf(response.role);
+            db.query('UPDATE employee SET manager_id = ? WHERE id = ?', [managerId, employeeId], (err, result) => {
+                if (err) throw err;
+                console.log(`${response.employee} has been assigned to ${response.manager}`);
                 start();
             })
         })
