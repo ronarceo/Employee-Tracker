@@ -198,8 +198,44 @@ function addEmployee() {
 }
 
 function updateEmployee() {
-    start();
+    let roleArray = [];
+    let employeeArray = [];
+    db.query('SELECT * FROM role', (err, res) => {
+        for (var i = 0; i < res.length; i++) {
+            roleArray.push(res[i].title);
+        }
+        db.query('SELECT * FROM employee', (err, res) => {
+            for (var i = 0; i < res.length; i++) {
+                employeeArray.push(res[i].first_name + " " + res[i].last_name);
+            }
+
+            inquirer.prompt([
+                {
+                    type: "list",
+                    message: "Which employee's role do you want to update?",
+                    choices: employeeArray,
+                    name: "employee"
+                },
+                {
+                    type: "list",
+                    message: "Which role do you want to assign the selected employee?",
+                    choices: roleArray,
+                    name: "role"
+                },
+            ])
+                .then((response) => {
+                    let employeeId = employeeArray.indexOf(response.employee) + 1;
+                    let roleId = roleArray.indexOf(response.role) + 1;
+                    db.query('UPDATE employee SET role_id = ? WHERE id = ?', [roleId, employeeId], (err, result) => {
+                        if (err) throw err;
+                        console.table(response);
+                        start();
+                    })
+                })
+        })
+    })
 }
+
 
 function quit() {
     process.exit();
