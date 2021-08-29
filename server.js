@@ -180,7 +180,7 @@ function addEmployee() {
                     let roleId = roleArray.indexOf(response.role) + 1;
                     let managerId = managerArray.indexOf(response.manager);
                     db.query(
-                        `INSERT INTO employee SET ?`,
+                        'INSERT INTO employee SET ?',
                         {
                             first_name: response.firstName,
                             last_name: response.lastName,
