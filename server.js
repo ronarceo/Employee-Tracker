@@ -140,7 +140,61 @@ function addRole() {
 }
 
 function addEmployee() {
-    start();
+    let roleArray = [];
+    let managerArray = [];
+    db.query('SELECT * FROM role', (err, res) => {
+        for (var i = 0; i < res.length; i++) {
+            roleArray.push(res[i].title);
+        }
+        db.query('SELECT * FROM employee', (err, res) => {
+            for (var i = 0; i < res.length; i++) {
+                managerArray.push('No manager');
+                managerArray.push(res[i].first_name + " " + res[i].last_name);
+            }
+
+            inquirer.prompt([
+                {
+                    type: "input",
+                    message: "What is the employee's first name?",
+                    name: "firstName"
+                },
+                {
+                    type: "input",
+                    message: "What is the employee's last name?",
+                    name: "lastName"
+                },
+                {
+                    type: "list",
+                    message: "What is the employee's role?",
+                    choices: roleArray,
+                    name: "role"
+                },
+                {
+                    type: "list",
+                    message: "What employee will manage the new employee?",
+                    choices: managerArray,
+                    name: "manager"
+                },
+            ])
+                .then((response) => {
+                    let roleId = roleArray.indexOf(response.role) + 1;
+                    let managerId = managerArray.indexOf(response.manager);
+                    db.query(
+                        `INSERT INTO employee SET ?`,
+                        {
+                            first_name: response.firstName,
+                            last_name: response.lastName,
+                            role_id: roleId,
+                            manager_id: managerId,
+                        },
+                        function (err) {
+                            if (err) throw err;
+                            console.table(response);
+                            start();
+                        })
+                })
+        })
+    })
 }
 
 function updateEmployee() {
