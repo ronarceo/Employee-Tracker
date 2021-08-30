@@ -65,7 +65,7 @@ function start() {
     inquirer.prompt({
         type: "list",
         message: "What would you like to do?",
-        choices: ["View departments", "View roles", "View employees", "Add department", "Add role", "Add employee",  "Update employee's role", "Update employee's manager", "Quit"],
+        choices: ["View departments", "View roles", "View employees", "Add department", "Add role", "Add employee",  "Update employee's role", "Update employee's manager", "Delete a department", "Delete a role", "Quit"],
         name: "startChoice"
     })
         .then(response => {
@@ -96,6 +96,12 @@ function start() {
                 case "Update employee's manager":
                     updateManager();
                     break;
+                case "Delete a department":
+                    deleteDepartment();
+                    break;
+                case "Delete a role":
+                    deleteRole();
+                    break;
                 default:
                     quit();
             }
@@ -117,7 +123,7 @@ function viewRoles() {
         start();
     })
 }
-// displays employees's details with their role title, salaray, and name of their manager
+// displays employees's details sorted by the user's choice 
 function viewEmployees() {
     inquirer.prompt({
         type: "list",
@@ -141,7 +147,7 @@ function addDepartment() {
         name: "departmentName"
     })
         .then(response => {
-            db.query('INSERT INTO department (name) VALUES (?)', [response.departmentName], (err, result) => {
+            db.query('INSERT INTO department (name) VALUES (?)', response.departmentName, (err, result) => {
                 if (err) throw err;
                 console.log(`Added ${response.departmentName} department to the database`);
                 start();
@@ -213,7 +219,7 @@ function addEmployee() {
             name: "manager"
         },
     ])
-        .then((response) => {
+        .then(response => {
             let roleId = roleArray.indexOf(response.role) + 1;
             let managerId = managerArray.indexOf(response.manager);
             db.query(
@@ -254,7 +260,7 @@ function updateEmployee() {
             name: "role"
         },
     ])
-        .then((response) => {
+        .then(response => {
             let employeeId = employeeArray.indexOf(response.employee) + 1;
             let roleId = roleArray.indexOf(response.role) + 1;
             db.query('UPDATE employee SET role_id = ? WHERE id = ?', [roleId, employeeId], (err, result) => {
@@ -275,7 +281,7 @@ function updateManager() {
         },
         {
             type: "list",
-            message: "Which employee's role do you want to update?",
+            message: "Which employee's manager do you want to update?",
             choices: employeeArray,
             name: "employee"
         },
@@ -286,15 +292,61 @@ function updateManager() {
             name: "manager"
         },
     ])
-        .then((response) => {
+        .then(response => {
             let employeeId = employeeArray.indexOf(response.employee) + 1;
-            let managerId = managerArray.indexOf(response.role);
+            let managerId = managerArray.indexOf(response.manager);
             db.query('UPDATE employee SET manager_id = ? WHERE id = ?', [managerId, employeeId], (err, result) => {
                 if (err) throw err;
                 console.log(`${response.employee} has been assigned to ${response.manager}`);
                 start();
             })
         })
+}
+// deletes a department that the user chooses
+function deleteDepartment() {
+    getDepartmentArray();
+    inquirer.prompt([
+        {
+            message: "All roles within the department must be deleted before deleting the department. Press enter to continue.",
+            name: "advisory"
+        },
+        {
+            type: "list",
+            message: "Which department do you want to delete?",
+            choices: departmentArray,
+            name: "deletedDepartment"
+        }
+    ])
+    .then(response => {
+        db.query('DELETE FROM department WHERE name = ?', response.deletedDepartment, (err, res) => {
+            if (err) throw err;
+            console.log(`${response.deletedDepartment} department has been deleted`);
+            start();
+        })    
+    })
+}
+// deletes a role that the user chooses
+function deleteRole() {
+    getRoleArray();
+    inquirer.prompt([
+        {
+            message: "No employee must be assigned to the role before attempting to delete it.",
+            name: "advisory"
+        },
+        {
+            type: "list",
+            message: "Which role do you want to delete?",
+            choices: roleArray,
+            name: "deletedRole"
+        }
+    ])
+    .then(response => {
+        db.query('DELETE FROM role WHERE title = ?', response.deletedRole, (err, res) => {
+            if (err) throw err;
+            console.log(`${response.deletedRole} role has been deleted`);
+            start();
+        })    
+    })
 }
 
 function quit() {
