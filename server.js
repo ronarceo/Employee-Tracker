@@ -65,7 +65,7 @@ function start() {
     inquirer.prompt({
         type: "list",
         message: "What would you like to do?",
-        choices: ["View departments", "View roles", "View employees", "Add department", "Add role", "Add employee",  "Update employee's role", "Update employee's manager", "Delete a department", "Delete a role", "Quit"],
+        choices: ["View departments", "View roles", "View employees", "Add department", "Add role", "Add employee",  "Update employee's role", "Update employee's manager", "Delete a department", "Delete a role", "Delete an employee", "Quit"],
         name: "startChoice"
     })
         .then(response => {
@@ -101,6 +101,9 @@ function start() {
                     break;
                 case "Delete a role":
                     deleteRole();
+                    break;
+                case "Delete an employee":
+                    deleteEmployee();
                     break;
                 default:
                     quit();
@@ -317,20 +320,20 @@ function deleteDepartment() {
             name: "deletedDepartment"
         }
     ])
-    .then(response => {
-        db.query('DELETE FROM department WHERE name = ?', response.deletedDepartment, (err, res) => {
-            if (err) throw err;
-            console.log(`${response.deletedDepartment} department has been deleted`);
-            start();
-        })    
-    })
+        .then(response => {
+            db.query('DELETE FROM department WHERE name = ?', response.deletedDepartment, (err, res) => {
+                if (err) throw err;
+                console.log(`${response.deletedDepartment} department has been deleted`);
+                start();
+            })
+        })
 }
 // deletes a role that the user chooses
 function deleteRole() {
     getRoleArray();
     inquirer.prompt([
         {
-            message: "No employee must be assigned to the role before attempting to delete it.",
+            message: "No employee must be assigned to the role before attempting to delete it. Press enter to continue.",
             name: "advisory"
         },
         {
@@ -340,15 +343,39 @@ function deleteRole() {
             name: "deletedRole"
         }
     ])
-    .then(response => {
-        db.query('DELETE FROM role WHERE title = ?', response.deletedRole, (err, res) => {
-            if (err) throw err;
-            console.log(`${response.deletedRole} role has been deleted`);
-            start();
-        })    
-    })
+        .then(response => {
+            db.query('DELETE FROM role WHERE title = ?', response.deletedRole, (err, res) => {
+                if (err) throw err;
+                console.log(`${response.deletedRole} role has been deleted`);
+                start();
+            })
+        })
 }
-
+//deletes an employee that the user chooses
+function deleteEmployee() {
+    getEmployeeArray();
+    inquirer.prompt([
+        {
+            message: "You cannot delete employees that are currently managers. Press enter to continue.",
+            name: "advisory"
+        },
+        {
+            type: "list",
+            message: "Which employee do you want to delete?",
+            choices: employeeArray,
+            name: "deletedEmployee"
+        }
+    ])
+        .then(response => {
+            let employeeId = employeeArray.indexOf(response.deletedEmployee) + 1;
+            db.query('DELETE FROM employee WHERE id = ?', employeeId, (err, res) => {
+                if (err) throw err;
+                console.log(`${response.deletedEmployee} has been deleted`);
+                start();
+            })
+        })
+}
+// closes the application
 function quit() {
     process.exit();
 }
