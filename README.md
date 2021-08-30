@@ -20,6 +20,7 @@ In order to use this application you must first install the required npm package
 Inside the db folder open and run schema.sql to create the database and tables. Run seeds.sql if you want to populate the database with sample data.
             
 ## Video
+https://drive.google.com/file/d/1RvCqBwT3a9PAHzOgNKlpMi1ri_Q4gzP6/view
 
 ## License
 Licensed under The MIT License
