@@ -119,11 +119,19 @@ function viewRoles() {
 }
 // displays employees's details with their role title, salaray, and name of their manager
 function viewEmployees() {
-    db.query('SELECT employee.id, employee.first_name, employee.last_name, role.title, role.salary, department.name AS department, CONCAT(m.first_name, " " ,  m.last_name) AS Manager FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id LEFT JOIN employee m on employee.manager_id = m.id ORDER BY id', (err, employees) => {
-        if (err) throw err;
-        console.table(employees);
-        start();
+    inquirer.prompt({
+        type: "list",
+        message: "In what order do you want to view employees?",
+        choices: ["by id", "by department", "by manager"],
+        name: "employeeOrder"
     })
+        .then(response => {
+            db.query(`SELECT employee.id, employee.first_name, employee.last_name, role.title, role.salary, department.name AS department, CONCAT(m.first_name, " " ,  m.last_name) AS Manager FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id LEFT JOIN employee m on employee.manager_id = m.id ORDER ${response.employeeOrder}`, (err, employees) => {
+                if (err) throw err;
+                console.table(employees);
+                start();
+            })
+        })
 }
 // adds a department named by the user
 function addDepartment() {
